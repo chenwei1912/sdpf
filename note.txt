@@ -1,0 +1,28 @@
+
+1. 线程模型是单线程单事件循环，需要多个可创建 n 个 IOContext 来对应 n 个线程
+   工作线程可使用线程池对象 ThreadPool (单队列多线程模式)
+2. TcpConnection 不能在栈上创建，可定义全局变量或在堆上创建 new make_unique make_shared
+3. TcpServer 没有管理TcpConnection，有接口让用户管理，
+   test中例子演示用 std::unordered_set 来维护所有TcpConnection
+4. IOBuf的接口 writable_bytes 返回可写空间大小是缓冲中剩余的可写大小，
+   每次写之前要确保可写空间足够，ensure_writable 接口能尽量保证空间大小
+5. 退出时尽量按先后顺序确保资源释放， 应先关闭所有 TcpConnection ，再关闭 TcpServer ，最后再关闭 IOContext
+
+6. RpcChannel 不能在栈上创建，可定义全局变量或在堆上创建 new make_unique make_shared
+7. rpc服务的方法参数数据按继承 RpcMessage 来创建
+7. rpc服务端按 RpcService 接口定义来实现，test中有一个 MsgService 做例子
+9. rpc客户端可直接使用 RpcChannel ，但最好是封装一个对应服务的 stub ，test中有一个 MsgService_Stub 做例子
+10. rpc客户端调用方法接口时 如果在 RpcController 中设置回调函数，就是异步通知模式，
+    如果没有设置就是同步模式(默认3秒超时)，禁止在回调函数(事件循环处理线程)中调用同步模式，以免阻塞
+
+
+
+
+
+
+
+
+
+
+
+

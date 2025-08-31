@@ -5,6 +5,7 @@
 
 #include <memory>
 #include <functional>
+#include <vector>
 
 // namespace sdpf {
 // namespace rpc {

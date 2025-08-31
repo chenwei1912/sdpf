@@ -1,0 +1,11 @@
+*.o
+*.d
+*.log
+*.jpg
+*.jpeg
+*.mp4
+
+/bin
+/.vscode
+/build
+

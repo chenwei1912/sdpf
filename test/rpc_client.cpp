@@ -2,6 +2,7 @@
 #include "RpcController.h"
 #include "MsgService_data.h"
 #include "logger.h"
+#include "IOContext.h"
 
 #include <thread>
 #include <unordered_set>

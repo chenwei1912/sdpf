@@ -124,7 +124,7 @@ int main(int argc, char* argv[]) {
         printf("A3 is NOT pod\n");
     }
 
-#if 1
+#if 0
     Dispatcher disp;
     // char* buf = new char[1024];
     // auto BufPtr = std::make_unique<char[]>(1024);
@@ -189,7 +189,7 @@ int main(int argc, char* argv[]) {
     // delete [] buf;
 #endif
 
-#if 0
+#if 1
     /* msgpack::sbuffer is a simple buffer implementation. */
     msgpack_sbuffer sbuf;
     msgpack_sbuffer_init(&sbuf);
