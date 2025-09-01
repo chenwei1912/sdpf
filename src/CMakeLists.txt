@@ -8,7 +8,7 @@ message("--------------- cmake start project ${PROJECT_NAME} ---------------")
 #set(CMAKE_VERBOSE_MAKEFILEON ON)
 message("${PROJECT_SOURCE_DIR}")
 message("${PARENT_DIR}")
-
+message(STATUS "Build type: ${CMAKE_BUILD_TYPE}")
 
 aux_source_directory(./ SRC_LIST)
 #message(STATUS "sdpf lib SRC_LIST: ${SRC_LIST}")
@@ -38,4 +38,6 @@ endif()
 
 
 target_link_libraries(sdpf uv msgpack-c zlog pthread)
+
+#set_target_properties(sdpf PROPERTIES POSITION_INDEPENDENT_CODE ON)
 

@@ -84,11 +84,9 @@ int RpcServerImp::register_service(RpcService* svc) {
 
 void RpcServerImp::on_launch(TcpServer* svr, int status) {
     if (0 == status) {
-        // LOG_INFO("RpcServerImp start success!");
         svr->alloc_callback(std::bind(&RpcServerImp::on_alloc, this));
         svr->accept_callback(std::bind(&RpcServerImp::on_accept, this, std::placeholders::_1, std::placeholders::_2));
     } else {
-        // LOG_ERROR("RpcServerImp start failed %d", status);
     }
 
     if (launch_cb_) {
@@ -135,7 +133,7 @@ void RpcServerImp::on_channel_connect(RpcChannelPtr chn, int status) {
     if (0 == status) {
         chn->set_services(&services_);
     } else {
-        // LOG_ERROR("RpcServerImp can't run this path");
+        // LOG_ERROR("RpcServer can't run this path");
         // channels_.erase(chn);
     }
 }
@@ -155,7 +153,7 @@ void RpcServerImp::notify_all(RpcService* svc, RpcMessage* msg) {
     for (const auto& chn : channels_) {
         ret = chn->notify(svc, msg);
         if (0 != ret) {
-            LOG_ERROR("RpcServerImp notify failed: %d", ret);
+            // LOG_ERROR("RpcServer notify failed: %d", ret);
         }
     }
 }

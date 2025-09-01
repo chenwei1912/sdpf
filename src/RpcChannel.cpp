@@ -265,7 +265,7 @@ int RpcChannelImp::notify(RpcService* psvc, RpcMessage* msg) {
     if (it != requests_.end()) {
         id = it->first;
     } else {
-        LOG_ERROR("service: %s, not find request id", psvc->name());
+        // LOG_ERROR("service: %s notify can not find request id", psvc->name());
         return -3;
     }
     }
@@ -444,10 +444,10 @@ void RpcChannelImp::process_request(uint32_t id, const char* service, const char
                 }
             }
             if (it == requests_.end()) {
-                LOG_DEBUG("service: %s, setting notify request id: %u", service, id);
+                LOG_INFO("service: %s, setting notify request id: %u", service, id);
                 requests_[id] = psvc;
             } else {
-                LOG_WARN("service: %s, has repeat notify request: %u", service, id);
+                LOG_WARN("service: %s, id: %u, has repeat notify request: %u", service, id, it->first);
             }
             break; // no process for notify register
         }
