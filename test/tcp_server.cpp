@@ -1,5 +1,5 @@
 //#include "catch.hpp"
-#include "IOContext.h"
+#include "IOScheduler.h"
 #include "TcpServer.h"
 #include "logger.h"
 
@@ -13,7 +13,7 @@
 std::unordered_set<TcpConnectionPtr> _connections;
 
 
-void test_server(IOContext* pctx) {
+void test_server(IOScheduler* pctx) {
     LOG_INFO("start event loop thread!");
     // std::this_thread::sleep_for(std::chrono::milliseconds(3000));
     pctx->run();
@@ -53,7 +53,7 @@ void svr_accept(TcpConnectionPtr conn, int status) {
         // auto destruct conn
     }
 }
-TcpConnectionPtr svr_alloc(IOContext* pctx) {
+TcpConnectionPtr svr_alloc(IOScheduler* pctx) {
     return std::make_shared<TcpConnection>(pctx);
 }
 void server_close(TcpServer* s) {
@@ -86,9 +86,9 @@ int main(int argc, char* argv[]) {
     LOG_INFO("start tcp test");
 
 #if 1
-    IOContext ctx;
+    IOScheduler ctx;
     ctx.init();
-    LOG_TRACE("IOContext size: %zu, AsyncTask: %zu", sizeof(IOContext), sizeof(IOContext::AsyncTask));
+    LOG_TRACE("IOScheduler size: %zu, AsyncTask: %zu", sizeof(IOScheduler), sizeof(IOScheduler::AsyncTask));
 
     TcpServer server(&ctx);
     server.launch_callback(server_start);

@@ -1,6 +1,6 @@
-#include "IOContext.h"
+#include "IOScheduler.h"
 #include "TcpConnection.h"
-#include "EventTimer.h"
+#include "IOTimer.h"
 #include "logger.h"
 
 #include <thread>
@@ -17,7 +17,7 @@ uint32_t _recv_bytes = 0;
 uint32_t _send_bytes = 0;
 
 
-void service_run(IOContext* pctx) {
+void service_run(IOScheduler* pctx) {
     LOG_INFO("start event loop thread!");
     pctx->run();
     LOG_INFO("exit loop thread!");
@@ -62,7 +62,7 @@ void tcp_connect(TcpConnectionPtr conn, int status) {
     }
 }
 
-void timer_func(IOContext* pctx) {
+void timer_func(IOScheduler* pctx) {
     if (_connections.size() < 200) {
         auto conn = std::make_shared<TcpConnection>(pctx);
         conn->connect_callback(tcp_connect);
@@ -75,7 +75,7 @@ void timer_func(IOContext* pctx) {
         conn->send("hellomedia", 11);
     }
 }
-void timer_close(EventTimer* t) {
+void timer_close(IOTimer* t) {
     LOG_DEBUG("timer close");
 }
 void close_all_connection() {
@@ -100,14 +100,14 @@ int main(int argc, char* argv[]) {
     LOG_INFO("start tcp client");
 
 #if 1
-    IOContext ctx;
+    IOScheduler ctx;
     ctx.init();
-    LOG_TRACE("IOContext size: %zu, AsyncTask: %zu", sizeof(IOContext), sizeof(IOContext::AsyncTask));
+    LOG_TRACE("IOScheduler size: %zu, AsyncTask: %zu", sizeof(IOScheduler), sizeof(IOScheduler::AsyncTask));
 
-    EventTimer t1(&ctx);
+    IOTimer t1(&ctx);
     t1.start(std::bind(timer_func, &ctx), 0, 1000);
 
-    // EventTimer t2(&ctx);
+    // IOTimer t2(&ctx);
     // t2.start(timer_release, 0, 2000);
 
     // TcpConnection conn(&ctx);

@@ -1,9 +1,7 @@
 #include "TcpServer.h"
 #include "TcpServerImp.h"
-// #include "IOContext.h"
+#include "IOScheduler.h"
 #include "logger.h"
-
-#include "IOContext.h"
 
 #include <string.h>
 
@@ -15,7 +13,7 @@
 static const int _DEFAULT_BACKLOG = 128;
 
 
-TcpServer::TcpServer(IOContext* pctx) {
+TcpServer::TcpServer(IOScheduler* pctx) {
     imp_ = new TcpServerImp(this, pctx);
 }
 
@@ -51,7 +49,7 @@ int TcpServer::stop() {
     return imp_->stop();
 }
 
-IOContext* TcpServer::context() {
+IOScheduler* TcpServer::context() {
     return imp_->context();
 }
 
@@ -60,7 +58,7 @@ IOContext* TcpServer::context() {
 // }
 
 
-TcpServerImp::TcpServerImp(TcpServer* pif, IOContext* pctx)
+TcpServerImp::TcpServerImp(TcpServer* pif, IOScheduler* pctx)
     : pif_(pif), context_(pctx), started_(false) {
 }
 
@@ -124,7 +122,7 @@ int TcpServerImp::stop() {
     return 0;
 }
 
-IOContext* TcpServerImp::context() {
+IOScheduler* TcpServerImp::context() {
     return context_;
 }
 

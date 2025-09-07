@@ -4,8 +4,8 @@
 #include "MsgService.h"
 #include "MsgService_data.h"
 
-#include "IOContext.h"
-#include "EventTimer.h"
+#include "IOScheduler.h"
+#include "IOTimer.h"
 
 #include <thread>
 // #include <unordered_set>
@@ -14,7 +14,7 @@
 
 
 
-void server_thread(IOContext* pctx) {
+void server_thread(IOScheduler* pctx) {
     LOG_INFO("start event loop thread!");
     // std::this_thread::sleep_for(std::chrono::milliseconds(3000));
     pctx->run();
@@ -63,9 +63,9 @@ int main(int argc, char* argv[]) {
     LOG_INFO("start tcp test");
 
 #if 1
-    IOContext ctx;
+    IOScheduler ctx;
     ctx.init();
-    LOG_TRACE("IOContext size: %zu", sizeof(IOContext));
+    LOG_TRACE("IOScheduler size: %zu", sizeof(IOScheduler));
 
     MsgService svc;
 
@@ -75,7 +75,7 @@ int main(int argc, char* argv[]) {
     server.register_service(&svc);
     server.start("192.168.17.17", 8341);
 
-    EventTimer t1(&ctx);
+    IOTimer t1(&ctx);
     t1.start(std::bind(timer_notify, &svc), 3000, 1000);
 
     std::thread t(server_thread, &ctx);

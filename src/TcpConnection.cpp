@@ -2,7 +2,7 @@
 #include "TcpConnectionImp.h"
 #include "logger.h"
 
-#include "IOContext.h"
+#include "IOScheduler.h"
 
 #include <string.h>
 
@@ -10,7 +10,7 @@
 
 
 
-TcpConnection::TcpConnection(IOContext* pctx) {
+TcpConnection::TcpConnection(IOScheduler* pctx) {
     imp_ = new TcpConnectionImp(pctx);
 }
 
@@ -55,7 +55,7 @@ int TcpConnection::send(const BufPtr& buf) {
     return imp_->send(buf);
 }
 
-IOContext* TcpConnection::context() {
+IOScheduler* TcpConnection::context() {
     return imp_->context();
 }
 
@@ -83,7 +83,7 @@ void TcpConnection::accept_connect(int status) {
 
 static const size_t _Max_Send_Buf = 64;
 
-TcpConnectionImp::TcpConnectionImp(IOContext* pctx) :
+TcpConnectionImp::TcpConnectionImp(IOScheduler* pctx) :
     context_(pctx), connected_(false) {
 }
 
@@ -186,7 +186,7 @@ int TcpConnectionImp::send(const BufPtr& buf) {
     return context_->dispatch(std::bind(&TcpConnectionImp::on_send, this, buf));
 }
 
-IOContext* TcpConnectionImp::context() {
+IOScheduler* TcpConnectionImp::context() {
     return context_;
 }
 

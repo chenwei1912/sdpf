@@ -7,7 +7,7 @@
 #include <functional>
 
 
-class IOContext;
+class IOScheduler;
 class RpcService;
 class RpcServerImp;
 
@@ -16,7 +16,7 @@ public:
     using LaunchCallback = std::function<void(RpcServer*, int)>;
     using CloseCallback = std::function<void(RpcServer*)>;
 
-    explicit RpcServer(IOContext* pctx);
+    explicit RpcServer(IOScheduler* pctx);
     ~RpcServer();
 
     void launch_callback(LaunchCallback cb);

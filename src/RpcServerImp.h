@@ -16,7 +16,7 @@ public:
     using LaunchCallback = std::function<void(RpcServer*, int)>;
     using CloseCallback = std::function<void(RpcServer*)>;
 
-    explicit RpcServerImp(RpcServer* pif, IOContext* pctx);
+    explicit RpcServerImp(RpcServer* pif, IOScheduler* pctx);
     ~RpcServerImp();
 
     void launch_callback(LaunchCallback cb);

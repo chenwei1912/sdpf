@@ -1,5 +1,5 @@
-#ifndef SDPF_EVENTSIGNALIMP_H
-#define SDPF_EVENTSIGNALIMP_H
+#ifndef SDPF_IOSIGNALIMP_H
+#define SDPF_IOSIGNALIMP_H
 
 #include "uv.h"
 
@@ -10,19 +10,18 @@
 // namespace sdpf {
 
 
-class EventSignalImp
-{
+class IOSignalImp {
 public:
     using SignalTask = std::function<void(int)>;
-    using SignalCloseCallback = std::function<void(EventSignal*)>;
+    using SignalCloseCallback = std::function<void(IOSignal*)>;
 
-    EventSignalImp(EventSignal* pif, IOContext* pctx);
-    ~EventSignalImp();
+    IOSignalImp(IOSignal* pif, IOScheduler* pctx);
+    ~IOSignalImp();
 
-    EventSignalImp(const EventSignalImp&) = delete;
-    EventSignalImp& operator=(const EventSignalImp&) = delete;
-    //EventSignalImp(EventSignalImp&&) = delete;
-    //EventSignalImp& operator=(EventSignalImp&&) = delete;
+    IOSignalImp(const IOSignalImp&) = delete;
+    IOSignalImp& operator=(const IOSignalImp&) = delete;
+    //IOSignalImp(IOSignalImp&&) = delete;
+    //IOSignalImp& operator=(IOSignalImp&&) = delete;
 
     int start(SignalTask cb, int signum);
     int stop(SignalCloseCallback cb = nullptr);
@@ -34,9 +33,9 @@ private:
     void on_close();
 
 
-    EventSignal* pif_;
+    IOSignal* pif_;
 
-    IOContext* context_;
+    IOScheduler* context_;
     uv_signal_t handle_;
     std::atomic_bool active_;
 
@@ -48,4 +47,4 @@ private:
 
 // } // namespace sdpf
 
-#endif // SDPF_EVENTSIGNALIMP_H
+#endif // SDPF_IOSIGNALIMP_H

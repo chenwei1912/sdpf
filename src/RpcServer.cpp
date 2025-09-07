@@ -14,7 +14,7 @@
 // using namespace sdpf;
 
 
-RpcServer::RpcServer(IOContext* pctx) {
+RpcServer::RpcServer(IOScheduler* pctx) {
     imp_ = new RpcServerImp(this, pctx);
 }
 
@@ -47,7 +47,7 @@ int RpcServer::register_service(RpcService* svc) {
 }
 
 
-RpcServerImp::RpcServerImp(RpcServer* pif, IOContext* pctx)
+RpcServerImp::RpcServerImp(RpcServer* pif, IOScheduler* pctx)
     : pif_(pif), tcp_server_(pctx) {
 }
 

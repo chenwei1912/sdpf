@@ -2,7 +2,7 @@
 #include "RpcController.h"
 #include "MsgService_data.h"
 #include "logger.h"
-#include "IOContext.h"
+#include "IOScheduler.h"
 
 #include <thread>
 #include <unordered_set>
@@ -137,7 +137,7 @@ private:
 const char* MsgService_Stub::service_ = "msg";
 
 
-void service_run(IOContext* pctx) {
+void service_run(IOScheduler* pctx) {
     LOG_INFO("start event loop thread!");
     pctx->run();
     LOG_INFO("exit loop thread!");
@@ -250,7 +250,7 @@ void chn_test(RpcChannelPtr chn) {
     // delete response;
     delete ctrl;
 }
-void timer_func(IOContext* pctx) {
+void timer_func(IOScheduler* pctx) {
     if (_channels.size() < 1) {
         auto chn = std::make_shared<RpcChannel>(pctx);
         chn->connect_callback(chn_connect);
@@ -294,7 +294,7 @@ int main(int argc, char* argv[]) {
     }
     LOG_INFO("start tcp client");
 
-    IOContext ctx;
+    IOScheduler ctx;
     ctx.init();
     LOG_TRACE("RpcChannel: %zu, RpcController: %zu", sizeof(RpcChannel), sizeof(RpcController));
 
@@ -315,7 +315,7 @@ int main(int argc, char* argv[]) {
     _flag = true;
     std::thread thd_sync(thread_send_sync, &client);
 #else
-    EventTimer t1(&ctx);
+    IOTimer t1(&ctx);
     t1.start(std::bind(timer_func, &ctx), 0, 1000);
 #endif
 

@@ -1,61 +1,61 @@
-#include "IOContext.h"
-#include "IOContextImp.h"
+#include "IOScheduler.h"
+#include "IOSchedulerImp.h"
 #include "logger.h"
 
 
 // using namespace sdpf;
 
 
-IOContext::IOContext() {
-    imp_ = new IOContextImp();
+IOScheduler::IOScheduler() {
+    imp_ = new IOSchedulerImp();
 }
 
-IOContext::~IOContext() {
-    //LOG_TRACE("IOContext {} destructing", static_cast<void*>(this));
+IOScheduler::~IOScheduler() {
+    //LOG_TRACE("IOScheduler {} destructing", static_cast<void*>(this));
     if (imp_) {
         delete imp_;
         imp_ = nullptr;
     }
 }
 
-int IOContext::init() {
+int IOScheduler::init() {
     return imp_->init();
 }
 
-int IOContext::run() {
+int IOScheduler::run() {
     return imp_->run();
 }
 
-void IOContext::stop() {
+void IOScheduler::stop() {
     imp_->stop();
 }
 
-int IOContext::post(AsyncTask f) {
+int IOScheduler::post(AsyncTask f) {
     return imp_->post(f);
 }
 
-int IOContext::dispatch(AsyncTask f) {
+int IOScheduler::dispatch(AsyncTask f) {
     return imp_->dispatch(f);
 }
 
-bool IOContext::is_init() {
+bool IOScheduler::is_init() {
     return imp_->is_init();
 }
 
-void* IOContext::handle() {
+void* IOScheduler::handle() {
     return imp_->handle();
 }
 
 
-IOContextImp::IOContextImp()
+IOSchedulerImp::IOSchedulerImp()
             : init_(false) {
 }
 
-IOContextImp::~IOContextImp() {
-    //LOG_TRACE("IOContextImp {} destructing", static_cast<void*>(this));
+IOSchedulerImp::~IOSchedulerImp() {
+    //LOG_TRACE("IOSchedulerImp {} destructing", static_cast<void*>(this));
 }
 
-int IOContextImp::init() {
+int IOSchedulerImp::init() {
     if (init_) { // 0 != uv_is_active((uv_handle_t*)&handle_);
         return -1;
     }
@@ -68,7 +68,7 @@ int IOContextImp::init() {
 
     handle_.data = (void*)this;
     ret = uv_async_init(&loop_, &handle_, [](uv_async_t* h){
-        IOContextImp* ctx = (IOContextImp*)h->data;
+        IOSchedulerImp* ctx = (IOSchedulerImp*)h->data;
         ctx->on_async();
     });
     if (0 != ret) {
@@ -82,7 +82,7 @@ int IOContextImp::init() {
     return 0;
 }
 
-int IOContextImp::run() {
+int IOSchedulerImp::run() {
     if (!init_) {
         return -1;
     }
@@ -90,11 +90,11 @@ int IOContextImp::run() {
     //     return -2;
     // }
 
-    LOG_INFO("IOContext start running");
+    LOG_INFO("IOScheduler start running");
     loop_thread_id_ = std::this_thread::get_id();
 
     int ret = uv_run(&loop_, UV_RUN_DEFAULT); // not reentrant, not in callback
-    LOG_INFO("IOContext uv_run exit: %d", ret);
+    LOG_INFO("IOScheduler uv_run exit: %d", ret);
 
     ret = uv_loop_close(&loop_);
     if (0 != ret) { // return UV_EBUSY if exists active handle
@@ -106,14 +106,14 @@ int IOContextImp::run() {
     return 0;
 }
 
-void IOContextImp::stop() {
+void IOSchedulerImp::stop() {
     if (init_) {
-        dispatch(std::bind(&IOContextImp::on_stop, this));
+        dispatch(std::bind(&IOSchedulerImp::on_stop, this));
         // init_ = false;
     }
 }
 
-int IOContextImp::post(AsyncTask f) {
+int IOSchedulerImp::post(AsyncTask f) {
     if (!f || !init_) {
         return -1;
     }
@@ -132,7 +132,7 @@ int IOContextImp::post(AsyncTask f) {
     return 0;
 }
 
-int IOContextImp::dispatch(AsyncTask f) {
+int IOSchedulerImp::dispatch(AsyncTask f) {
     if (!f || !init_) {
         return -1;
     }
@@ -146,19 +146,19 @@ int IOContextImp::dispatch(AsyncTask f) {
     return ret;
 }
 
-bool IOContextImp::is_init() {
+bool IOSchedulerImp::is_init() {
     return init_;
 }
 
-uv_loop_t* IOContextImp::handle() {
+uv_loop_t* IOSchedulerImp::handle() {
     return &loop_;
 }
 
-bool IOContextImp::in_loop_thread() {
+bool IOSchedulerImp::in_loop_thread() {
     return (loop_thread_id_ == std::this_thread::get_id());
 }
 
-void IOContextImp::on_async() {
+void IOSchedulerImp::on_async() {
     std::vector<AsyncTask> temp;
     {
     std::lock_guard<std::mutex> lock(mutex_);
@@ -170,16 +170,16 @@ void IOContextImp::on_async() {
     }
 }
 
-void IOContextImp::on_stop() {
+void IOSchedulerImp::on_stop() {
     if (!init_) {
         return;
     }
     init_ = false;
-    // LOG_DEBUG("IOContext::on_stop()");
+    // LOG_DEBUG("IOScheduler::on_stop()");
 
     if (0 == (uv_is_closing((uv_handle_t*)&handle_))) {
         uv_close((uv_handle_t*)&handle_, [](uv_handle_t* h) {
-            IOContextImp* loop = (IOContextImp*)h->data;
+            IOSchedulerImp* loop = (IOSchedulerImp*)h->data;
             loop->on_close();
         });
     } else {
@@ -187,7 +187,7 @@ void IOContextImp::on_stop() {
     }
 }
 
-void IOContextImp::on_close() {
+void IOSchedulerImp::on_close() {
     uv_stop(&loop_);
 
     // close remain active handle_t

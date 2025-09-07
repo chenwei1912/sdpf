@@ -1,42 +1,42 @@
-#include "EventSignal.h"
-#include "EventSignalImp.h"
+#include "IOSignal.h"
+#include "IOSignalImp.h"
 #include "logger.h"
 
-#include "IOContext.h"
+#include "IOScheduler.h"
 
 // using namespace sdpf;
 
 
-EventSignal::EventSignal(IOContext* pctx) {
-    imp_ = new EventSignalImp(this, pctx);
+IOSignal::IOSignal(IOScheduler* pctx) {
+    imp_ = new IOSignalImp(this, pctx);
 }
 
-EventSignal::~EventSignal() {
-    //LOG_TRACE("EventSignal {} destructing", static_cast<void*>(this));
+IOSignal::~IOSignal() {
+    //LOG_TRACE("IOSignal {} destructing", static_cast<void*>(this));
     if (imp_) {
         delete imp_;
         imp_ = nullptr;
     }
 }
 
-int EventSignal::start(SignalTask cb, int signum) {
+int IOSignal::start(SignalTask cb, int signum) {
     return imp_->start(cb, signum);
 }
 
-int EventSignal::stop(SignalCloseCallback cb) {
+int IOSignal::stop(SignalCloseCallback cb) {
     return imp_->stop(cb);
 }
 
 
-EventSignalImp::EventSignalImp(EventSignal* pif, IOContext* pctx)
+IOSignalImp::IOSignalImp(IOSignal* pif, IOScheduler* pctx)
             : pif_(pif), context_(pctx), active_(false) {
 }
 
-EventSignalImp::~EventSignalImp() {
-    //LOG_TRACE("EventSignalImp {} destructing", static_cast<void*>(this));
+IOSignalImp::~IOSignalImp() {
+    //LOG_TRACE("IOSignalImp {} destructing", static_cast<void*>(this));
 }
 
-int EventSignalImp::start(SignalTask cb, int signum) {
+int IOSignalImp::start(SignalTask cb, int signum) {
     if (nullptr == context_ || !context_->is_init()) {
         return -1;
     }
@@ -44,9 +44,9 @@ int EventSignalImp::start(SignalTask cb, int signum) {
         return -2;
     }
 
-    int ret = context_->dispatch(std::bind(&EventSignalImp::on_start, this, cb, signum));
+    int ret = context_->dispatch(std::bind(&IOSignalImp::on_start, this, cb, signum));
     if (0 != ret) {
-        LOG_ERROR("EventSignal::start dispatch failed: %d", ret);
+        LOG_ERROR("IOSignal::start dispatch failed: %d", ret);
         return -3;
     }
 
@@ -54,7 +54,7 @@ int EventSignalImp::start(SignalTask cb, int signum) {
     return 0;
 }
 
-int EventSignalImp::stop(SignalCloseCallback cb) {
+int IOSignalImp::stop(SignalCloseCallback cb) {
     if (nullptr == context_ || !context_->is_init()) {
         return -1;
     }
@@ -62,9 +62,9 @@ int EventSignalImp::stop(SignalCloseCallback cb) {
         return -2;
     }
 
-    int ret = context_->dispatch(std::bind(&EventSignalImp::on_stop, this, cb));
+    int ret = context_->dispatch(std::bind(&IOSignalImp::on_stop, this, cb));
     if (0 != ret) {
-        LOG_ERROR("EventSignal::stop dispatch failed: %d", ret);
+        LOG_ERROR("IOSignal::stop dispatch failed: %d", ret);
         return -3;
     }
 
@@ -72,7 +72,7 @@ int EventSignalImp::stop(SignalCloseCallback cb) {
     return 0;
 }
 
-void EventSignalImp::on_start(SignalTask cb, int signum) {
+void IOSignalImp::on_start(SignalTask cb, int signum) {
     if (active_) {
         return;
     }
@@ -94,7 +94,7 @@ void EventSignalImp::on_start(SignalTask cb, int signum) {
     uv_unref((uv_handle_t*)&handle_);
 
     ret = uv_signal_start(&handle_, [](uv_signal_t* h, int signum){
-        EventSignalImp* s = (EventSignalImp*)h->data;
+        IOSignalImp* s = (IOSignalImp*)h->data;
         s->on_signal(signum);
     }, signum_);
     if (0 != ret) {
@@ -104,14 +104,14 @@ void EventSignalImp::on_start(SignalTask cb, int signum) {
     }
 }
 
-void EventSignalImp::on_stop(SignalCloseCallback cb) {
+void IOSignalImp::on_stop(SignalCloseCallback cb) {
     if (!active_) {
         return;
     }
 
     active_ = false;
     close_cb_ = cb;
-    // LOG_DEBUG("EventSignal %d stop!", signum);
+    // LOG_DEBUG("IOSignal %d stop!", signum);
 
     if (0 != uv_is_active((uv_handle_t*)&handle_)) {
         int ret = uv_signal_stop(&handle_);
@@ -121,7 +121,7 @@ void EventSignalImp::on_stop(SignalCloseCallback cb) {
     }
     if (0 == (uv_is_closing((uv_handle_t*)&handle_))) {
         uv_close((uv_handle_t*)&handle_, [](uv_handle_t* h) {
-            EventSignalImp* s = (EventSignalImp*)h->data;
+            IOSignalImp* s = (IOSignalImp*)h->data;
             s->on_close();
         });
     } else {
@@ -129,13 +129,13 @@ void EventSignalImp::on_stop(SignalCloseCallback cb) {
     }
 }
 
-void EventSignalImp::on_signal(int signum) {
+void IOSignalImp::on_signal(int signum) {
     if (cb_) {
         cb_(signum);
     }
 }
 
-void EventSignalImp::on_close() {
+void IOSignalImp::on_close() {
     if (close_cb_) {
         close_cb_(pif_);
     }

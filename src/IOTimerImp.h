@@ -1,5 +1,5 @@
-#ifndef SDPF_EVENTTIMERIMP_H
-#define SDPF_EVENTTIMERIMP_H
+#ifndef SDPF_IOTIMERIMP_H
+#define SDPF_IOTIMERIMP_H
 
 #include "uv.h"
 
@@ -10,18 +10,18 @@
 // namespace sdpf {
 
 
-class EventTimerImp {
+class IOTimerImp {
 public:
     using TimerTask = std::function<void()>;
-    using TimerCloseCallback = std::function<void(EventTimer*)>;
+    using TimerCloseCallback = std::function<void(IOTimer*)>;
 
-    EventTimerImp(EventTimer* pif, IOContext* pctx);
-    ~EventTimerImp();
+    IOTimerImp(IOTimer* pif, IOScheduler* pctx);
+    ~IOTimerImp();
 
-    EventTimerImp(const EventTimerImp&) = delete;
-    EventTimerImp& operator=(const EventTimerImp&) = delete;
-    //EventTimerImp(EventTimerImp&&) = delete;
-    //EventTimerImp& operator=(EventTimerImp&&) = delete;
+    IOTimerImp(const IOTimerImp&) = delete;
+    IOTimerImp& operator=(const IOTimerImp&) = delete;
+    //IOTimerImp(IOTimerImp&&) = delete;
+    //IOTimerImp& operator=(IOTimerImp&&) = delete;
 
     int start(TimerTask cb, size_t timeout, size_t repeat);
     int stop(TimerCloseCallback cb = nullptr);
@@ -33,9 +33,9 @@ private:
     void on_close();
 
 
-    EventTimer* pif_;
+    IOTimer* pif_;
 
-    IOContext* context_;
+    IOScheduler* context_;
     uv_timer_t handle_;
     std::atomic_bool active_;
 
@@ -48,4 +48,4 @@ private:
 
 // } // namespace sdpf
 
-#endif // SDPF_EVENTTIMERIMP_H
+#endif // SDPF_IOTIMERIMP_H

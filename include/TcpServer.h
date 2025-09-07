@@ -6,7 +6,7 @@
 
 // namespace sdpf {
 
-// class IOContext;
+// class IOScheduler;
 class TcpServerImp;
 
 class TcpServer {
@@ -16,7 +16,7 @@ public:
     using AcceptCallback = std::function<void(TcpConnectionPtr, int)>;
     using CloseCallback = std::function<void(TcpServer*)>;
 
-    explicit TcpServer(IOContext* pctx);
+    explicit TcpServer(IOScheduler* pctx);
     ~TcpServer();
 
     TcpServer(const TcpServer&) = delete;
@@ -33,7 +33,7 @@ public:
     int start(const char* ip_str, uint16_t port);
     int stop();
 
-    IOContext* context();
+    IOScheduler* context();
     // void* handle();
 
 private:

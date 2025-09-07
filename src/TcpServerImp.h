@@ -17,7 +17,7 @@ public:
     using AcceptCallback = std::function<void(TcpConnectionPtr, int)>;
     using CloseCallback = std::function<void(TcpServer*)>;
 
-    TcpServerImp(TcpServer* pif, IOContext* pctx);
+    TcpServerImp(TcpServer* pif, IOScheduler* pctx);
     ~TcpServerImp();
 
     TcpServerImp(const TcpServerImp&) = delete;
@@ -34,7 +34,7 @@ public:
     int start(const char* ip_str, uint16_t port);
     int stop();
 
-    IOContext* context();
+    IOScheduler* context();
     // uv_tcp_t* handle();
 
 private:
@@ -46,7 +46,7 @@ private:
 
     TcpServer* pif_;
 
-    IOContext* context_;
+    IOScheduler* context_;
     uv_tcp_t server_;
 
     std::atomic_bool started_;

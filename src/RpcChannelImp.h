@@ -23,7 +23,7 @@ public:
     using ConnectCallback = std::function<void(RpcChannelPtr, int)>;
     using CloseCallback = std::function<void(RpcChannelPtr)>;
 
-    explicit RpcChannelImp(IOContext* pctx);
+    explicit RpcChannelImp(IOScheduler* pctx);
     ~RpcChannelImp();
 
     RpcChannelImp(const RpcChannelImp&) = delete;

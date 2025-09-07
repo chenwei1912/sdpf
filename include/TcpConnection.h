@@ -16,7 +16,7 @@ typedef struct {
 } SocketAddr;
 
 
-class IOContext;
+class IOScheduler;
 class TcpConnectionImp;
 
 class TcpConnection;
@@ -29,7 +29,7 @@ public:
     using SendCallback = std::function<void(TcpConnectionPtr, int, BufPtr)>;
     using CloseCallback = std::function<void(TcpConnectionPtr)>;
 
-    TcpConnection(IOContext* pctx);
+    TcpConnection(IOScheduler* pctx);
     ~TcpConnection();
 
     TcpConnection(const TcpConnection&) = delete;
@@ -47,7 +47,7 @@ public:
     int send(const char* data, size_t n);
     int send(const BufPtr& buf);
 
-    IOContext* context();
+    IOScheduler* context();
     void* handle();
     bool connected();
     void data(void* data);

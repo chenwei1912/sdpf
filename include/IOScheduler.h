@@ -1,5 +1,5 @@
-#ifndef SDPF_IOCONTEXT_H
-#define SDPF_IOCONTEXT_H
+#ifndef SDPF_IOSCHEDULER_H
+#define SDPF_IOSCHEDULER_H
 
 #include <functional>
 
@@ -7,19 +7,19 @@
 // namespace sdpf {
 
 
-class IOContextImp;
+class IOSchedulerImp;
 
-class IOContext {
+class IOScheduler {
 public:
     using AsyncTask = std::function<void()>;
 
-    IOContext();
-    ~IOContext();
+    IOScheduler();
+    ~IOScheduler();
 
-    IOContext(const IOContext&) = delete;
-    IOContext& operator=(const IOContext&) = delete;
-    //IOContext(IOContext&&) = delete;
-    //IOContext& operator=(IOContext&&) = delete;
+    IOScheduler(const IOScheduler&) = delete;
+    IOScheduler& operator=(const IOScheduler&) = delete;
+    //IOScheduler(IOScheduler&&) = delete;
+    //IOScheduler& operator=(IOScheduler&&) = delete;
 
     int init();
     int run();
@@ -37,9 +37,9 @@ public:
     void* handle();
 
 private:
-    IOContextImp* imp_;
+    IOSchedulerImp* imp_;
 };
 
 // } // namespace sdpf
 
-#endif // SDPF_IOCONTEXT_H
+#endif // SDPF_IOSCHEDULER_H

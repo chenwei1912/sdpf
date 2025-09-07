@@ -19,7 +19,7 @@ public:
     using SendCallback = std::function<void(TcpConnectionPtr, int, BufPtr)>;
     using CloseCallback = std::function<void(TcpConnectionPtr)>;
 
-    TcpConnectionImp(IOContext* pctx);
+    TcpConnectionImp(IOScheduler* pctx);
     ~TcpConnectionImp();
 
     TcpConnectionImp(const TcpConnectionImp&) = delete;
@@ -39,7 +39,7 @@ public:
     int send(const char* data, size_t n);
     int send(const BufPtr& buf);
 
-    IOContext* context();
+    IOScheduler* context();
     uv_tcp_t* handle();
     bool connected();
     void data(void* data);
@@ -66,7 +66,7 @@ private:
 
     TcpConnectionPtr pif_;
 
-    IOContext* context_;
+    IOScheduler* context_;
     uv_tcp_t handle_;
     uv_connect_t connect_req_;
     uv_write_t write_req_;

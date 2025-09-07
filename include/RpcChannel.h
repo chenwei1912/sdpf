@@ -10,7 +10,7 @@
 // namespace sdpf {
 // namespace rpc {
 
-class IOContext;
+class IOScheduler;
 class RpcService;
 class RpcMessage;
 class RpcController;
@@ -25,7 +25,7 @@ public:
     using ConnectCallback = std::function<void(RpcChannelPtr, int)>;
     using CloseCallback = std::function<void(RpcChannelPtr)>;
 
-    explicit RpcChannel(IOContext* pctx);
+    explicit RpcChannel(IOScheduler* pctx);
     ~RpcChannel();
 
     RpcChannel(const RpcChannel&) = delete;

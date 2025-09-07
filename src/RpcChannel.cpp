@@ -18,7 +18,7 @@
 
 
 
-RpcChannel::RpcChannel(IOContext* pctx) {
+RpcChannel::RpcChannel(IOScheduler* pctx) {
     imp_ = new RpcChannelImp(pctx);
 }
 
@@ -103,7 +103,7 @@ static const char* _METHOD_NOTIFY = "notify";
 static const int _ENOTIFY_MARK = 9876;
 
 
-RpcChannelImp::RpcChannelImp(IOContext* pctx)
+RpcChannelImp::RpcChannelImp(IOScheduler* pctx)
     : id_(0), services_(nullptr) {
     conn_ = std::make_shared<TcpConnection>(pctx);
 }

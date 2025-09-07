@@ -1,42 +1,42 @@
-#include "EventTimer.h"
-#include "EventTimerImp.h"
+#include "IOTimer.h"
+#include "IOTimerImp.h"
 #include "logger.h"
 
-#include "IOContext.h"
+#include "IOScheduler.h"
 
 // using namespace sdpf;
 
 
-EventTimer::EventTimer(IOContext* pctx) {
-    imp_ = new EventTimerImp(this, pctx);
+IOTimer::IOTimer(IOScheduler* pctx) {
+    imp_ = new IOTimerImp(this, pctx);
 }
 
-EventTimer::~EventTimer() {
-    //LOG_TRACE("EventTimer {} destructing", static_cast<void*>(this));
+IOTimer::~IOTimer() {
+    //LOG_TRACE("IOTimer {} destructing", static_cast<void*>(this));
     if (imp_) {
         delete imp_;
         imp_ = nullptr;
     }
 }
 
-int EventTimer::start(TimerTask cb, size_t timeout, size_t repeat) {
+int IOTimer::start(TimerTask cb, size_t timeout, size_t repeat) {
     return imp_->start(cb, timeout, repeat);
 }
 
-int EventTimer::stop(TimerCloseCallback cb) {
+int IOTimer::stop(TimerCloseCallback cb) {
     return imp_->stop(cb);
 }
 
 
-EventTimerImp::EventTimerImp(EventTimer* pif, IOContext* pctx)
+IOTimerImp::IOTimerImp(IOTimer* pif, IOScheduler* pctx)
             : pif_(pif), context_(pctx), active_(false) {
 }
 
-EventTimerImp::~EventTimerImp() {
-    //LOG_TRACE("EventTimerImp {} destructing", static_cast<void*>(this));
+IOTimerImp::~IOTimerImp() {
+    //LOG_TRACE("IOTimerImp {} destructing", static_cast<void*>(this));
 }
 
-int EventTimerImp::start(TimerTask cb, size_t timeout, size_t repeat) {
+int IOTimerImp::start(TimerTask cb, size_t timeout, size_t repeat) {
     if (nullptr == context_ || !context_->is_init()) {
         return -1;
     }
@@ -44,9 +44,9 @@ int EventTimerImp::start(TimerTask cb, size_t timeout, size_t repeat) {
         return -2;
     }
 
-    int ret = context_->dispatch(std::bind(&EventTimerImp::on_start, this, cb, timeout, repeat));
+    int ret = context_->dispatch(std::bind(&IOTimerImp::on_start, this, cb, timeout, repeat));
     if (0 != ret) {
-        LOG_ERROR("EventTimer::start dispatch failed: %d", ret);
+        LOG_ERROR("IOTimer::start dispatch failed: %d", ret);
         return -3;
     }
 
@@ -54,7 +54,7 @@ int EventTimerImp::start(TimerTask cb, size_t timeout, size_t repeat) {
     return 0;
 }
 
-int EventTimerImp::stop(TimerCloseCallback cb) {
+int IOTimerImp::stop(TimerCloseCallback cb) {
     if (nullptr == context_ || !context_->is_init()) {
         return -1;
     }
@@ -62,9 +62,9 @@ int EventTimerImp::stop(TimerCloseCallback cb) {
         return -2;
     }
 
-    int ret = context_->dispatch(std::bind(&EventTimerImp::on_stop, this, cb));
+    int ret = context_->dispatch(std::bind(&IOTimerImp::on_stop, this, cb));
     if (0 != ret) {
-        LOG_ERROR("EventTimer::stop dispatch failed: %d", ret);
+        LOG_ERROR("IOTimer::stop dispatch failed: %d", ret);
         return -3;
     }
 
@@ -72,7 +72,7 @@ int EventTimerImp::stop(TimerCloseCallback cb) {
     return 0;
 }
 
-void EventTimerImp::on_start(TimerTask cb, size_t timeout, size_t repeat) {
+void IOTimerImp::on_start(TimerTask cb, size_t timeout, size_t repeat) {
     if (active_) {
         return;
     }
@@ -95,7 +95,7 @@ void EventTimerImp::on_start(TimerTask cb, size_t timeout, size_t repeat) {
     uv_unref((uv_handle_t*)&handle_);
 
     ret = uv_timer_start(&handle_, [](uv_timer_t* h){
-        EventTimerImp* t = (EventTimerImp*)h->data;
+        IOTimerImp* t = (IOTimerImp*)h->data;
         t->on_timer();
     }, timeout, repeat);
     if (0 != ret) {
@@ -105,14 +105,14 @@ void EventTimerImp::on_start(TimerTask cb, size_t timeout, size_t repeat) {
     }
 }
 
-void EventTimerImp::on_stop(TimerCloseCallback cb) {
+void IOTimerImp::on_stop(TimerCloseCallback cb) {
     if (!active_) {
         return;
     }
 
     active_ = false;
     close_cb_ = cb;
-    // LOG_DEBUG("EventTimer::on_stop()");
+    // LOG_DEBUG("IOTimer::on_stop()");
 
     if (0 != uv_is_active((uv_handle_t*)&handle_)) {
         int ret = uv_timer_stop(&handle_);
@@ -122,7 +122,7 @@ void EventTimerImp::on_stop(TimerCloseCallback cb) {
     }
     if (0 == (uv_is_closing((uv_handle_t*)&handle_))) {
         uv_close((uv_handle_t*)&handle_, [](uv_handle_t* h) {
-            EventTimerImp* t = (EventTimerImp*)h->data;
+            IOTimerImp* t = (IOTimerImp*)h->data;
             t->on_close();
         });
     } else {
@@ -130,13 +130,13 @@ void EventTimerImp::on_stop(TimerCloseCallback cb) {
     }
 }
 
-void EventTimerImp::on_timer() {
+void IOTimerImp::on_timer() {
     if (cb_) {
         cb_();
     }
 }
 
-void EventTimerImp::on_close() {
+void IOTimerImp::on_close() {
     if (close_cb_) {
         close_cb_(pif_);
     }
