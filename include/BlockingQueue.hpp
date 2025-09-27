@@ -1,5 +1,5 @@
-#ifndef BLOCKINGQUEUE_H
-#define BLOCKINGQUEUE_H
+#ifndef SDPF_BLOCKINGQUEUE_H
+#define SDPF_BLOCKINGQUEUE_H
 
 #include <deque>
 #include <mutex>
@@ -7,8 +7,7 @@
 
 
 template<typename T>
-class BlockingQueue
-{
+class BlockingQueue {
 public:
     BlockingQueue()
         : max_count_(0)
@@ -35,8 +34,9 @@ public:
 
     bool push(const T& item) {
         std::lock_guard<std::mutex> lock(mutex_);
-        if (max_count_ > 0 && queue_.size() >= max_count_)
+        if (max_count_ > 0 && queue_.size() >= max_count_) {
             return false;
+        }
 
         queue_.push_back(item);
         cond_.notify_one();
@@ -45,34 +45,36 @@ public:
 
     bool push(T&& item) {
         std::lock_guard<std::mutex> lock(mutex_);
-        if (max_count_ > 0 && queue_.size() >= max_count_)
+        if (max_count_ > 0 && queue_.size() >= max_count_) {
             return false;
+        }
 
         queue_.push_back(std::move(item));
         cond_.notify_one();
         return true;
     }
-    
+
     bool pop(T& item) {
         std::unique_lock<std::mutex> lock(mutex_);
         //while (queue_.empty() && !exit_)
         //    cond_.wait(lock);
         cond_.wait(lock, [this](){ return (!queue_.empty() || exit_); });
 
-        if (exit_)
+        if (exit_) {
             return false;
+        }
 
         item = std::move(queue_.front());
         queue_.pop_front();
         return true;
     }
-    
+
 //  bool pop(T& item, int ms_timeout) {
 //      // check ms_timeout?
 
 //      std::unique_lock<std::mutex> lock(mutex_);
 //      while (queue_.empty() && !exit_)
-//          if (std::cv_status::timeout 
+//          if (std::cv_status::timeout
 //                    == cond_.wait_for(lock, std::chrono::milliseconds(ms_timeout)))
 //              return false; // timeout
 
@@ -86,16 +88,18 @@ public:
 
     bool front(T& item) {
         std::lock_guard<std::mutex> lock(mutex_);
-        if (queue_.empty())
+        if (queue_.empty()) {
             return false;
+        }
         item = queue_.front();
         return true;
     }
 
     bool back(T& item) {
         std::lock_guard<std::mutex> lock(mutex_);
-        if (queue_.empty())
+        if (queue_.empty()) {
             return false;
+        }
         item = queue_.back();
         return true;
     }
@@ -134,4 +138,4 @@ private:
     bool exit_;
 };
 
-#endif // BLOCKINGQUEUE_H
+#endif // SDPF_BLOCKINGQUEUE_H

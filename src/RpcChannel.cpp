@@ -1,10 +1,8 @@
 #include "RpcChannel.h"
-#include "RpcChannelImp.h"
-
 #include "RpcService.h"
 #include "RpcMessage.h"
 #include "RpcController.h"
-// #include "Dispatcher.h"
+#include "Dispatcher.h"
 #include "logger.h"
 
 
@@ -14,61 +12,75 @@
 #include <arpa/inet.h>
 #endif
 
+#include <atomic>
+#include <mutex>
+#include <unordered_map>
 #include <string.h>
 
 
+class RpcChannelImp {
+public:
+    using ConnectCallback = std::function<void(RpcChannelPtr, int)>;
+    using CloseCallback = std::function<void(RpcChannelPtr)>;
 
-RpcChannel::RpcChannel(IOScheduler* pctx) {
-    imp_ = new RpcChannelImp(pctx);
-}
+    explicit RpcChannelImp(IOScheduler* pctx);
+    ~RpcChannelImp();
 
-RpcChannel::~RpcChannel() {
-    // LOG_TRACE("RpcChannel dtor");
-    if (imp_) {
-        delete imp_;
-        imp_ = nullptr;
-    }
-}
+    RpcChannelImp(const RpcChannelImp&) = delete;
+    RpcChannelImp& operator=(const RpcChannelImp&) = delete;
+    // RpcChannelImp(RpcChannelImp&&) = default;
+    // RpcChannelImp& operator=(RpcChannelImp&&) = default;
 
-void RpcChannel::connect_callback(ConnectCallback cb) {
-    imp_->connect_callback(cb);
-}
+    void set_shared(RpcChannelPtr ptr);
 
-void RpcChannel::close_callback(CloseCallback cb) {
-    imp_->close_callback(cb);
-}
+    void connect_callback(ConnectCallback cb);
+    void close_callback(CloseCallback cb);
 
-int RpcChannel::start(const char* ip_str, uint16_t port) {
-    imp_->set_shared(shared_from_this()); // CAUTION: must call this for callback param
-    return imp_->start(ip_str, port);
-}
+    int start(const char* ip_str, uint16_t port); // client side
+    int stop();
 
-int RpcChannel::stop() {
-    return imp_->stop();
-}
+    int call_method(const char* service, const char* method, RpcMessage* request, RpcMessage* response,
+                    RpcController* ctrl);          // client side
+    int notify(RpcService* psvc, RpcMessage* msg); // server side
 
-int RpcChannel::call_method(const char* service, const char* method, RpcMessage* request, RpcMessage* response,
-                            RpcController* ctrl) {
-    return imp_->call_method(service, method, request, response, ctrl);
-}
+    TcpConnectionPtr connection();
 
-int RpcChannel::notify(RpcService* psvc, RpcMessage* msg) {
-    return imp_->notify(psvc, msg);
-}
+    // call by server
+    void accept_connect();
+    void set_services(std::vector<RpcService*>* services);
 
-TcpConnectionPtr RpcChannel::connection() {
-    return imp_->connection();
-}
+private:
+    void on_connect(TcpConnectionPtr conn, int status);
+    void on_recv(TcpConnectionPtr conn, IOBuf* pb, size_t n);
+    void on_send(TcpConnectionPtr conn, int status, BufPtr spb);
+    void on_close(TcpConnectionPtr conn);
 
-void RpcChannel::accept_connect() {
-    imp_->set_shared(shared_from_this()); // CAUTION: must call this for callback param
-    imp_->accept_connect();
-}
+    int parse(IOBuf* pb);
+    void process_request(uint32_t id, const char* service, const char* method, const char* buf, size_t len);
+    void process_response(uint32_t id, int code, const char* text, const char* buf, size_t len);
+    void done(uint32_t id, RpcController* ctrl);                 // server side
+    void send_resp(uint32_t id, int code, RpcMessage* response); // server side
+    int send_packet(Meta_Rpc* meta, RpcMessage* msg);            // send request and response
 
-void RpcChannel::set_services(std::vector<RpcService*>* services) {
-    imp_->set_services(services);
-}
+    RpcController* remove_request(uint32_t id);
+    RpcService* find_svc(const char* name);
 
+
+    RpcChannelPtr pif_;
+    TcpConnectionPtr conn_;
+
+    std::atomic<uint32_t> id_;
+
+    std::unordered_map<uint32_t, void*> requests_; // client: RpcController* server: RpcService*
+    std::mutex mutex_requests_;
+
+    std::vector<RpcService*>* services_;
+
+    ConnectCallback conn_cb_;
+    CloseCallback close_cb_;
+
+    // void* data_;
+};
 
 typedef struct {
     uint8_t mark[4];    // "ERPC"
@@ -648,4 +660,56 @@ RpcService* RpcChannelImp::find_svc(const char* name) {
         }
     }
     return nullptr;
+}
+
+
+RpcChannel::RpcChannel(IOScheduler* pctx) {
+    imp_ = new RpcChannelImp(pctx);
+}
+
+RpcChannel::~RpcChannel() {
+    // LOG_TRACE("RpcChannel dtor");
+    if (imp_) {
+        delete imp_;
+        imp_ = nullptr;
+    }
+}
+
+void RpcChannel::connect_callback(ConnectCallback cb) {
+    imp_->connect_callback(cb);
+}
+
+void RpcChannel::close_callback(CloseCallback cb) {
+    imp_->close_callback(cb);
+}
+
+int RpcChannel::start(const char* ip_str, uint16_t port) {
+    imp_->set_shared(shared_from_this()); // CAUTION: must call this for callback param
+    return imp_->start(ip_str, port);
+}
+
+int RpcChannel::stop() {
+    return imp_->stop();
+}
+
+int RpcChannel::call_method(const char* service, const char* method, RpcMessage* request, RpcMessage* response,
+                            RpcController* ctrl) {
+    return imp_->call_method(service, method, request, response, ctrl);
+}
+
+int RpcChannel::notify(RpcService* psvc, RpcMessage* msg) {
+    return imp_->notify(psvc, msg);
+}
+
+TcpConnectionPtr RpcChannel::connection() {
+    return imp_->connection();
+}
+
+void RpcChannel::accept_connect() {
+    imp_->set_shared(shared_from_this()); // CAUTION: must call this for callback param
+    imp_->accept_connect();
+}
+
+void RpcChannel::set_services(std::vector<RpcService*>* services) {
+    imp_->set_services(services);
 }

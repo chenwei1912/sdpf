@@ -1,8 +1,9 @@
 #include "IOBuf.h"
-#include "IOBufImp.h"
+// #include "IOBufImp.h"
 // #include "logger.h"
 
 // #include <algorithm>
+#include <vector>
 #include <string.h>
 
 
@@ -12,67 +13,51 @@ const size_t IOBuf::initialSize = 1024;
 static const size_t _Max_Size = IOBuf::initialSize * 4;
 
 
+// namespace sdpf {
 
-IOBuf::IOBuf(size_t init) {
-    imp_ = new IOBufImp(init);
-}
+class IOBufImp {
+public:
+    explicit IOBufImp(size_t init);
+    ~IOBufImp();
+    // IOBufImp(const IOBufImp&) = delete;
+    // IOBufImp& operator=(const IOBufImp&) = delete;
+    // IOBufImp(IOBufImp&&) = delete;
+    // IOBufImp& operator=(IOBufImp&&) = delete;
 
-IOBuf::~IOBuf() {
-    // LOG_TRACE("IOBuf dtor!");
-    if (imp_) {
-        delete imp_;
-        imp_ = nullptr;
-    }
-}
+    void swap(IOBufImp& rhs);
 
-void IOBuf::swap(IOBuf& rhs) {
-    std::swap(imp_, rhs.imp_);
-}
+    const char* begin_read() const;
+    size_t readable_bytes() const;
+    int has_readed(size_t n);
+    void has_readall();
+    int read(char* data, size_t n);
+    // int read(std::string& str);
 
-const char* IOBuf::begin_read() const {
-    return imp_->begin_read();
-}
+    char* begin_write();
+    size_t writable_bytes() const; // remain space from write pointer
+    int has_written(size_t n);
+    int write(const char* data, size_t n);
+    // int write(const std::string& str);
 
-size_t IOBuf::readable_bytes() const {
-    return imp_->readable_bytes();
-}
+    // std::string read_string();
+    // std::string read_string(size_t n);
 
-int IOBuf::has_readed(size_t n) {
-    return imp_->has_readed(n);
-}
+    int ensure_writable(size_t n);
+    void shrink();
 
-void IOBuf::has_readall() {
-    imp_->has_readall();
-}
+private:
+    char* begin();
+    const char* begin() const;
 
-int IOBuf::read(char* data, size_t n) {
-    return imp_->read(data, n);
-}
+    int make_space(size_t n);
+    void move_readable_data();
 
-char* IOBuf::begin_write() {
-    return imp_->begin_write();
-}
+    std::vector<char> buff_;
+    size_t read_index_;
+    size_t write_index_;
+};
 
-size_t IOBuf::writable_bytes() const {
-    return imp_->writable_bytes();
-}
-
-int IOBuf::has_written(size_t n) {
-    return imp_->has_written(n);
-}
-
-int IOBuf::write(const char* data, size_t n) {
-    return imp_->write(data, n);
-}
-
-int IOBuf::ensure_writable(size_t n) {
-    return imp_->ensure_writable(n);
-}
-
-void IOBuf::shrink() {
-    return imp_->shrink();
-}
-
+// } // namespace sdpf
 
 //IOBufImp::IOBufImp()
 //    : read_index_(0)
@@ -232,4 +217,65 @@ void IOBufImp::move_readable_data() {
     }
     read_index_ = 0;
     write_index_ = count;
+}
+
+
+IOBuf::IOBuf(size_t init) {
+    imp_ = new IOBufImp(init);
+}
+
+IOBuf::~IOBuf() {
+    // LOG_TRACE("IOBuf dtor!");
+    if (imp_) {
+        delete imp_;
+        imp_ = nullptr;
+    }
+}
+
+void IOBuf::swap(IOBuf& rhs) {
+    std::swap(imp_, rhs.imp_);
+}
+
+const char* IOBuf::begin_read() const {
+    return imp_->begin_read();
+}
+
+size_t IOBuf::readable_bytes() const {
+    return imp_->readable_bytes();
+}
+
+int IOBuf::has_readed(size_t n) {
+    return imp_->has_readed(n);
+}
+
+void IOBuf::has_readall() {
+    imp_->has_readall();
+}
+
+int IOBuf::read(char* data, size_t n) {
+    return imp_->read(data, n);
+}
+
+char* IOBuf::begin_write() {
+    return imp_->begin_write();
+}
+
+size_t IOBuf::writable_bytes() const {
+    return imp_->writable_bytes();
+}
+
+int IOBuf::has_written(size_t n) {
+    return imp_->has_written(n);
+}
+
+int IOBuf::write(const char* data, size_t n) {
+    return imp_->write(data, n);
+}
+
+int IOBuf::ensure_writable(size_t n) {
+    return imp_->ensure_writable(n);
+}
+
+void IOBuf::shrink() {
+    return imp_->shrink();
 }

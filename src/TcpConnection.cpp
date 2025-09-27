@@ -1,85 +1,90 @@
 #include "TcpConnection.h"
-#include "TcpConnectionImp.h"
+#include "IOScheduler.h"
 #include "logger.h"
 
-#include "IOScheduler.h"
+#include "uv.h"
 
+#include <atomic>
+#include <queue>
 #include <string.h>
 
 // using namespace sdpf;
 
 
+class TcpConnectionImp {
+public:
+    using ConnectCallback = std::function<void(TcpConnectionPtr, int)>;
+    using RecvCallback = std::function<void(TcpConnectionPtr, IOBuf*, size_t)>;
+    using SendCallback = std::function<void(TcpConnectionPtr, int, BufPtr)>;
+    using CloseCallback = std::function<void(TcpConnectionPtr)>;
 
-TcpConnection::TcpConnection(IOScheduler* pctx) {
-    imp_ = new TcpConnectionImp(pctx);
-}
+    TcpConnectionImp(IOScheduler* pctx);
+    ~TcpConnectionImp();
 
-TcpConnection::~TcpConnection() {
-    // LOG_TRACE("TcpConnection dtor!");
-    if (imp_) {
-        delete imp_;
-        imp_ = nullptr;
-    }
-}
+    TcpConnectionImp(const TcpConnectionImp&) = delete;
+    TcpConnectionImp& operator=(const TcpConnectionImp&) = delete;
+    // TcpConnectionImp(TcpConnectionImp&&) = delete;
+    // TcpConnectionImp& operator=(TcpConnectionImp&&) = delete;
 
-void TcpConnection::connect_callback(ConnectCallback cb) {
-    imp_->connect_callback(cb);
-}
+    void set_shared(TcpConnectionPtr ptr);
 
-void TcpConnection::recv_callback(RecvCallback cb) {
-    imp_->recv_callback(cb);
-}
+    void connect_callback(ConnectCallback cb);
+    void recv_callback(RecvCallback cb);
+    void send_callback(SendCallback cb);
+    void close_callback(CloseCallback cb);
 
-void TcpConnection::send_callback(SendCallback cb) {
-    imp_->send_callback(cb);
-}
+    int start(const char* ip_str, uint16_t port); // start connect
+    int stop();
+    int send(const char* data, size_t n);
+    int send(const BufPtr& buf);
 
-void TcpConnection::close_callback(CloseCallback cb) {
-    imp_->close_callback(cb);
-}
+    IOScheduler* context();
+    uv_tcp_t* handle();
+    bool connected();
+    void data(void* data);
+    void* data() const;
 
-int TcpConnection::start(const char* ip_str, uint16_t port) {
-    imp_->set_shared(shared_from_this()); // CAUTION: must call this for callback param
-    return imp_->start(ip_str, port);
-}
+    // internal call by server accept
+    // public wrap for on_connect
+    void accept_connect(int status);
 
-int TcpConnection::stop() {
-    return imp_->stop();
-}
+private:
+    void on_start(std::shared_ptr<SocketAddr> ptr);
+    void on_stop();
+    void on_send(BufPtr buf); // const BufPtr&
 
-int TcpConnection::send(const char* data, size_t n) {
-    return imp_->send(data, n);
-}
+    void on_connect(int status);
+    void on_alloc(size_t s_size, uv_buf_t* buf);
+    void on_read(ssize_t nread, const uv_buf_t* buf);
+    void on_write(int status);
+    void on_close();
 
-int TcpConnection::send(const BufPtr& buf) {
-    return imp_->send(buf);
-}
+    void send_buf();
+    void clear_buf();
 
-IOScheduler* TcpConnection::context() {
-    return imp_->context();
-}
 
-void* TcpConnection::handle() {
-    return imp_->handle();
-}
+    TcpConnectionPtr pif_;
 
-bool TcpConnection::connected() {
-    return imp_->connected();
-}
+    IOScheduler* context_;
+    uv_tcp_t handle_;
+    uv_connect_t connect_req_;
+    uv_write_t write_req_;
+    // std::atomic_bool started_;
+    std::atomic_bool connected_;
 
-void TcpConnection::data(void* data) {
-    imp_->data(data);
-}
+    SocketAddr addr_;
 
-void* TcpConnection::data() {
-    return imp_->data();
-}
+    IOBuf recv_buf_;
+    std::queue<BufPtr> send_buf_;
+    // std::mutex send_mutex_;
 
-void TcpConnection::accept_connect(int status) {
-    imp_->set_shared(shared_from_this()); // CAUTION: must call this for callback param
-    imp_->accept_connect(status);
-}
+    ConnectCallback conn_cb_;
+    RecvCallback recv_cb_;
+    SendCallback send_cb_;
+    CloseCallback close_cb_;
 
+    void* data_; // std::any for c++17
+};
 
 static const size_t _Max_Send_Buf = 64;
 
@@ -435,4 +440,75 @@ void TcpConnectionImp::clear_buf() {
     while (!send_buf_.empty()) {
         send_buf_.pop();
     }
+}
+
+
+TcpConnection::TcpConnection(IOScheduler* pctx) {
+    imp_ = new TcpConnectionImp(pctx);
+}
+
+TcpConnection::~TcpConnection() {
+    // LOG_TRACE("TcpConnection dtor!");
+    if (imp_) {
+        delete imp_;
+        imp_ = nullptr;
+    }
+}
+
+void TcpConnection::connect_callback(ConnectCallback cb) {
+    imp_->connect_callback(cb);
+}
+
+void TcpConnection::recv_callback(RecvCallback cb) {
+    imp_->recv_callback(cb);
+}
+
+void TcpConnection::send_callback(SendCallback cb) {
+    imp_->send_callback(cb);
+}
+
+void TcpConnection::close_callback(CloseCallback cb) {
+    imp_->close_callback(cb);
+}
+
+int TcpConnection::start(const char* ip_str, uint16_t port) {
+    imp_->set_shared(shared_from_this()); // CAUTION: must call this for callback param
+    return imp_->start(ip_str, port);
+}
+
+int TcpConnection::stop() {
+    return imp_->stop();
+}
+
+int TcpConnection::send(const char* data, size_t n) {
+    return imp_->send(data, n);
+}
+
+int TcpConnection::send(const BufPtr& buf) {
+    return imp_->send(buf);
+}
+
+IOScheduler* TcpConnection::context() {
+    return imp_->context();
+}
+
+void* TcpConnection::handle() {
+    return imp_->handle();
+}
+
+bool TcpConnection::connected() {
+    return imp_->connected();
+}
+
+void TcpConnection::data(void* data) {
+    imp_->data(data);
+}
+
+void* TcpConnection::data() {
+    return imp_->data();
+}
+
+void TcpConnection::accept_connect(int status) {
+    imp_->set_shared(shared_from_this()); // CAUTION: must call this for callback param
+    imp_->accept_connect(status);
 }

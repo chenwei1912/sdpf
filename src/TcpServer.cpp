@@ -1,8 +1,11 @@
 #include "TcpServer.h"
-#include "TcpServerImp.h"
+// #include "TcpServerImp.h"
 #include "IOScheduler.h"
 #include "logger.h"
 
+#include "uv.h"
+
+#include <atomic>
 #include <string.h>
 
 
@@ -13,50 +16,55 @@
 static const int _DEFAULT_BACKLOG = 128;
 
 
-TcpServer::TcpServer(IOScheduler* pctx) {
-    imp_ = new TcpServerImp(this, pctx);
-}
+class TcpServerImp {
+public:
+    using LaunchCallback = std::function<void(TcpServer*, int)>;
+    using AllocCallback = std::function<TcpConnectionPtr()>;
+    using AcceptCallback = std::function<void(TcpConnectionPtr, int)>;
+    using CloseCallback = std::function<void(TcpServer*)>;
 
-TcpServer::~TcpServer() {
-    // LOG_TRACE("TcpServer [{}] destructing", name_);
-    if (imp_) {
-        delete imp_;
-        imp_ = nullptr;
-    }
-}
+    TcpServerImp(TcpServer* pif, IOScheduler* pctx);
+    ~TcpServerImp();
 
-void TcpServer::launch_callback(LaunchCallback cb) {
-    imp_->launch_callback(cb);
-}
+    TcpServerImp(const TcpServerImp&) = delete;
+    TcpServerImp& operator=(const TcpServerImp&) = delete;
+    // TcpServerImp(TcpServerImp&&) = delete;
+    // TcpServerImp& operator=(TcpServerImp&&) = delete;
 
-void TcpServer::alloc_callback(AllocCallback cb) {
-    imp_->alloc_callback(cb);
-}
+    void launch_callback(LaunchCallback cb);
+    void alloc_callback(AllocCallback cb);
+    void accept_callback(AcceptCallback cb);
+    void close_callback(CloseCallback cb);
 
-void TcpServer::accept_callback(AcceptCallback cb) {
-    imp_->accept_callback(cb);
-}
+    // start listen and wait for accept new connection
+    int start(const char* ip_str, uint16_t port);
+    int stop();
 
-void TcpServer::close_callback(CloseCallback cb) {
-    imp_->close_callback(cb);
-}
+    IOScheduler* context();
+    // uv_tcp_t* handle();
 
-int TcpServer::start(const char* ip_str, uint16_t port) {
-    return imp_->start(ip_str, port);
-}
+private:
+    void on_start(std::shared_ptr<SocketAddr> ptr);
+    void on_stop();
+    void on_accept(int status);
+    void on_close();
 
-int TcpServer::stop() {
-    return imp_->stop();
-}
 
-IOScheduler* TcpServer::context() {
-    return imp_->context();
-}
+    TcpServer* pif_;
 
-// void* TcpServer::handle() {
-//     return imp_->handle();
-// }
+    IOScheduler* context_;
+    uv_tcp_t server_;
 
+    std::atomic_bool started_;
+    SocketAddr addr_;
+
+    LaunchCallback launch_cb_;
+    AllocCallback alloc_cb_;
+    AcceptCallback accept_cb_;
+    CloseCallback close_cb_;
+
+    // const std::string name_;
+};
 
 TcpServerImp::TcpServerImp(TcpServer* pif, IOScheduler* pctx)
     : pif_(pif), context_(pctx), started_(false) {
@@ -256,3 +264,48 @@ void TcpServerImp::on_close() {
         close_cb_(pif_);
     }
 }
+
+
+TcpServer::TcpServer(IOScheduler* pctx) {
+    imp_ = new TcpServerImp(this, pctx);
+}
+
+TcpServer::~TcpServer() {
+    // LOG_TRACE("TcpServer [{}] destructing", name_);
+    if (imp_) {
+        delete imp_;
+        imp_ = nullptr;
+    }
+}
+
+void TcpServer::launch_callback(LaunchCallback cb) {
+    imp_->launch_callback(cb);
+}
+
+void TcpServer::alloc_callback(AllocCallback cb) {
+    imp_->alloc_callback(cb);
+}
+
+void TcpServer::accept_callback(AcceptCallback cb) {
+    imp_->accept_callback(cb);
+}
+
+void TcpServer::close_callback(CloseCallback cb) {
+    imp_->close_callback(cb);
+}
+
+int TcpServer::start(const char* ip_str, uint16_t port) {
+    return imp_->start(ip_str, port);
+}
+
+int TcpServer::stop() {
+    return imp_->stop();
+}
+
+IOScheduler* TcpServer::context() {
+    return imp_->context();
+}
+
+// void* TcpServer::handle() {
+//     return imp_->handle();
+// }

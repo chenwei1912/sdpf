@@ -1,51 +1,61 @@
 #include "IOScheduler.h"
-#include "IOSchedulerImp.h"
+// #include "IOSchedulerImp.h"
 #include "logger.h"
+
+#include "uv.h"
+
+#include <thread>
+#include <vector>
+#include <mutex>
+#include <atomic>
 
 
 // using namespace sdpf;
 
 
-IOScheduler::IOScheduler() {
-    imp_ = new IOSchedulerImp();
-}
+// namespace sdpf {
 
-IOScheduler::~IOScheduler() {
-    //LOG_TRACE("IOScheduler {} destructing", static_cast<void*>(this));
-    if (imp_) {
-        delete imp_;
-        imp_ = nullptr;
-    }
-}
+class IOSchedulerImp
+{
+public:
+    using AsyncTask = std::function<void()>;
 
-int IOScheduler::init() {
-    return imp_->init();
-}
+    IOSchedulerImp();
+    ~IOSchedulerImp();
 
-int IOScheduler::run() {
-    return imp_->run();
-}
+    IOSchedulerImp(const IOSchedulerImp&) = delete;
+    IOSchedulerImp& operator=(const IOSchedulerImp&) = delete;
+    //IOSchedulerImp(IOSchedulerImp&&) = delete;
+    //IOSchedulerImp& operator=(IOSchedulerImp&&) = delete;
 
-void IOScheduler::stop() {
-    imp_->stop();
-}
+    int init();
+    int run();
+    void stop();
 
-int IOScheduler::post(AsyncTask f) {
-    return imp_->post(f);
-}
+    int post(AsyncTask f);
+    int dispatch(AsyncTask f);
 
-int IOScheduler::dispatch(AsyncTask f) {
-    return imp_->dispatch(f);
-}
+    bool is_init();
+    uv_loop_t* handle();
 
-bool IOScheduler::is_init() {
-    return imp_->is_init();
-}
+private:
+    bool in_loop_thread();
+    void on_async();
+    void on_stop();
+    void on_close();
 
-void* IOScheduler::handle() {
-    return imp_->handle();
-}
+    uv_loop_t loop_;
+    uv_async_t handle_;
 
+    std::atomic_bool init_;
+    std::thread::id loop_thread_id_;
+
+    std::vector<AsyncTask> queue_task_;
+    std::mutex mutex_;
+
+};
+
+// } // namespace sdpf
 
 IOSchedulerImp::IOSchedulerImp()
             : init_(false) {
@@ -197,4 +207,45 @@ void IOSchedulerImp::on_close() {
     //       uv_close(handle, nullptr);
     //     }
     // }, nullptr);
+}
+
+
+IOScheduler::IOScheduler() {
+    imp_ = new IOSchedulerImp();
+}
+
+IOScheduler::~IOScheduler() {
+    //LOG_TRACE("IOScheduler {} destructing", static_cast<void*>(this));
+    if (imp_) {
+        delete imp_;
+        imp_ = nullptr;
+    }
+}
+
+int IOScheduler::init() {
+    return imp_->init();
+}
+
+int IOScheduler::run() {
+    return imp_->run();
+}
+
+void IOScheduler::stop() {
+    imp_->stop();
+}
+
+int IOScheduler::post(AsyncTask f) {
+    return imp_->post(f);
+}
+
+int IOScheduler::dispatch(AsyncTask f) {
+    return imp_->dispatch(f);
+}
+
+bool IOScheduler::is_init() {
+    return imp_->is_init();
+}
+
+void* IOScheduler::handle() {
+    return imp_->handle();
 }

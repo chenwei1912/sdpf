@@ -1,51 +1,51 @@
 #include "RpcServer.h"
-#include "RpcServerImp.h"
 #include "RpcService.h"
+#include "TcpServer.h"
+#include "RpcChannel.h"
 #include "logger.h"
 
-// #include "RpcChannel.h"
-// #include "TcpServer.h"
-
-// #include <string>
-// #include <future>
-// #include <chrono>
-// #include <thread>
+#include <unordered_set>
 
 // using namespace sdpf;
 
 
-RpcServer::RpcServer(IOScheduler* pctx) {
-    imp_ = new RpcServerImp(this, pctx);
-}
+class RpcServerImp {
+public:
+    using LaunchCallback = std::function<void(RpcServer*, int)>;
+    using CloseCallback = std::function<void(RpcServer*)>;
 
-RpcServer::~RpcServer() {
-    // LOG_TRACE("RpcServer dtor");
-    if (imp_) {
-        delete imp_;
-        imp_ = nullptr;
-    }
-}
+    explicit RpcServerImp(RpcServer* pif, IOScheduler* pctx);
+    ~RpcServerImp();
 
-void RpcServer::launch_callback(LaunchCallback cb) {
-    imp_->launch_callback(cb);
-}
+    void launch_callback(LaunchCallback cb);
+    void close_callback(CloseCallback cb);
 
-void RpcServer::close_callback(CloseCallback cb) {
-    imp_->close_callback(cb);
-}
+    int start(const char* strip, unsigned short port);
+    int stop();
 
-int RpcServer::start(const char* strip, unsigned short port) {
-    return imp_->start(strip, port);
-}
+    int register_service(RpcService* svc);
 
-int RpcServer::stop() {
-    return imp_->stop();
-}
+private:
+    void on_launch(TcpServer* svr, int status);
+    TcpConnectionPtr on_alloc();
+    void on_accept(TcpConnectionPtr conn, int status);
+    void on_channel_connect(RpcChannelPtr chn, int status);
+    void on_channel_close(RpcChannelPtr chn);
+    void on_close(TcpServer* svr);
 
-int RpcServer::register_service(RpcService* svc) {
-    return imp_->register_service(svc);
-}
+    void notify_all(RpcService* svc, RpcMessage* msg);
+    void close_all();
 
+
+    RpcServer* pif_;
+    TcpServer tcp_server_;
+
+    std::unordered_set<RpcChannelPtr> channels_;
+    std::vector<RpcService*> services_;
+
+    LaunchCallback launch_cb_;
+    CloseCallback close_cb_;
+};
 
 RpcServerImp::RpcServerImp(RpcServer* pif, IOScheduler* pctx)
     : pif_(pif), tcp_server_(pctx) {
@@ -164,3 +164,35 @@ void RpcServerImp::close_all() {
     }
 }
 
+
+RpcServer::RpcServer(IOScheduler* pctx) {
+    imp_ = new RpcServerImp(this, pctx);
+}
+
+RpcServer::~RpcServer() {
+    // LOG_TRACE("RpcServer dtor");
+    if (imp_) {
+        delete imp_;
+        imp_ = nullptr;
+    }
+}
+
+void RpcServer::launch_callback(LaunchCallback cb) {
+    imp_->launch_callback(cb);
+}
+
+void RpcServer::close_callback(CloseCallback cb) {
+    imp_->close_callback(cb);
+}
+
+int RpcServer::start(const char* strip, unsigned short port) {
+    return imp_->start(strip, port);
+}
+
+int RpcServer::stop() {
+    return imp_->stop();
+}
+
+int RpcServer::register_service(RpcService* svc) {
+    return imp_->register_service(svc);
+}

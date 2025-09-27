@@ -1,74 +1,56 @@
 #include "RpcController.h"
-#include "RpcControllerImp.h"
+// #include "RpcControllerImp.h"
 // #include "logger.h"
+
+#include <mutex>
+#include <condition_variable>
 
 // using namespace sdpf;
 
 
-RpcController::RpcController() {
-    imp_ = new RpcControllerImp();
-}
+class RpcControllerImp {
+public:
+    using DoneCallback = std::function<void()>;
 
-RpcController::~RpcController() {
-    // LOG_TRACE("RpcController dtor");
-    if (imp_) {
-        delete imp_;
-        imp_ = nullptr;
-    }
-}
+    RpcControllerImp();
+    ~RpcControllerImp();
 
-void RpcController::resp(RpcMessage* resp) {
-    imp_->resp(resp);
-}
+    RpcControllerImp(const RpcControllerImp&) = delete;
+    RpcControllerImp& operator=(const RpcControllerImp&) = delete;
+    // RpcControllerImp(RpcControllerImp&&) = default;
+    // RpcControllerImp& operator=(RpcControllerImp&&) = default;
 
-RpcMessage* RpcController::resp() const {
-    return imp_->resp();
-}
+    void resp(RpcMessage* resp);
+    RpcMessage* resp() const;
 
-void RpcController::done(DoneCallback cb) {
-    imp_->done(cb);
-}
+    void done(DoneCallback done);
+    DoneCallback done() const;
 
-RpcController::DoneCallback RpcController::done() const {
-    return imp_->done();
-}
+    void ec(int ec);
+    int ec() const;
 
-void RpcController::ec(int ec) {
-    imp_->ec(ec);
-}
+    void text(const char* str); // server side
+    const char* text();
 
-int RpcController::ec() const {
-    return imp_->ec();
-}
+    bool failed() const; // client side
 
-void RpcController::text(const char* str) {
-    imp_->text(str);
-}
+    // for internal, user can't call
+    void lock();
+    void unlock();
+    int wait();
+    void notify();
 
-const char* RpcController::text() {
-    return imp_->text();
+private:
+    RpcMessage* response_;
+    DoneCallback done_;
+
+    int ec_;
+    std::string text_;
+    // int log_id_;
+
+    std::mutex mutex_;
+    std::condition_variable cond_;
 };
-
-bool RpcController::failed() const {
-    return imp_->failed();
-}
-
-void RpcController::lock() {
-    imp_->lock();
-}
-
-void RpcController::unlock() {
-    imp_->unlock();
-}
-
-int RpcController::wait() {
-    return imp_->wait();
-}
-
-void RpcController::notify() {
-    imp_->notify();
-}
-
 
 RpcControllerImp::RpcControllerImp()
     : response_(nullptr)
@@ -153,4 +135,69 @@ void RpcControllerImp::notify() {
     std::unique_lock<std::mutex> lk(mutex_);
     lk.unlock();
     cond_.notify_one();
+}
+
+
+RpcController::RpcController() {
+    imp_ = new RpcControllerImp();
+}
+
+RpcController::~RpcController() {
+    // LOG_TRACE("RpcController dtor");
+    if (imp_) {
+        delete imp_;
+        imp_ = nullptr;
+    }
+}
+
+void RpcController::resp(RpcMessage* resp) {
+    imp_->resp(resp);
+}
+
+RpcMessage* RpcController::resp() const {
+    return imp_->resp();
+}
+
+void RpcController::done(DoneCallback cb) {
+    imp_->done(cb);
+}
+
+RpcController::DoneCallback RpcController::done() const {
+    return imp_->done();
+}
+
+void RpcController::ec(int ec) {
+    imp_->ec(ec);
+}
+
+int RpcController::ec() const {
+    return imp_->ec();
+}
+
+void RpcController::text(const char* str) {
+    imp_->text(str);
+}
+
+const char* RpcController::text() {
+    return imp_->text();
+};
+
+bool RpcController::failed() const {
+    return imp_->failed();
+}
+
+void RpcController::lock() {
+    imp_->lock();
+}
+
+void RpcController::unlock() {
+    imp_->unlock();
+}
+
+int RpcController::wait() {
+    return imp_->wait();
+}
+
+void RpcController::notify() {
+    imp_->notify();
 }

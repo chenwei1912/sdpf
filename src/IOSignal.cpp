@@ -1,32 +1,52 @@
 #include "IOSignal.h"
-#include "IOSignalImp.h"
+#include "IOScheduler.h"
 #include "logger.h"
 
-#include "IOScheduler.h"
+#include "uv.h"
+
+#include <atomic>
 
 // using namespace sdpf;
 
 
-IOSignal::IOSignal(IOScheduler* pctx) {
-    imp_ = new IOSignalImp(this, pctx);
-}
+// namespace sdpf {
 
-IOSignal::~IOSignal() {
-    //LOG_TRACE("IOSignal {} destructing", static_cast<void*>(this));
-    if (imp_) {
-        delete imp_;
-        imp_ = nullptr;
-    }
-}
+class IOSignalImp {
+public:
+    using SignalTask = std::function<void(int)>;
+    using SignalCloseCallback = std::function<void(IOSignal*)>;
 
-int IOSignal::start(SignalTask cb, int signum) {
-    return imp_->start(cb, signum);
-}
+    IOSignalImp(IOSignal* pif, IOScheduler* pctx);
+    ~IOSignalImp();
 
-int IOSignal::stop(SignalCloseCallback cb) {
-    return imp_->stop(cb);
-}
+    IOSignalImp(const IOSignalImp&) = delete;
+    IOSignalImp& operator=(const IOSignalImp&) = delete;
+    // IOSignalImp(IOSignalImp&&) = delete;
+    // IOSignalImp& operator=(IOSignalImp&&) = delete;
 
+    int start(SignalTask cb, int signum);
+    int stop(SignalCloseCallback cb = nullptr);
+
+private:
+    void on_start(SignalTask cb, int signum);
+    void on_stop(SignalCloseCallback cb);
+    void on_signal(int signum);
+    void on_close();
+
+
+    IOSignal* pif_;
+
+    IOScheduler* context_;
+    uv_signal_t handle_;
+    std::atomic_bool active_;
+
+    SignalTask cb_;
+    int signum_;
+
+    SignalCloseCallback close_cb_;
+};
+
+// } // namespace sdpf
 
 IOSignalImp::IOSignalImp(IOSignal* pif, IOScheduler* pctx)
             : pif_(pif), context_(pctx), active_(false) {
@@ -139,4 +159,25 @@ void IOSignalImp::on_close() {
     if (close_cb_) {
         close_cb_(pif_);
     }
+}
+
+
+IOSignal::IOSignal(IOScheduler* pctx) {
+    imp_ = new IOSignalImp(this, pctx);
+}
+
+IOSignal::~IOSignal() {
+    //LOG_TRACE("IOSignal {} destructing", static_cast<void*>(this));
+    if (imp_) {
+        delete imp_;
+        imp_ = nullptr;
+    }
+}
+
+int IOSignal::start(SignalTask cb, int signum) {
+    return imp_->start(cb, signum);
+}
+
+int IOSignal::stop(SignalCloseCallback cb) {
+    return imp_->stop(cb);
 }

@@ -1,17 +1,13 @@
-#ifndef THREADPOOL_H
-#define THREADPOOL_H
+#ifndef SDPF_THREADPOOL_H
+#define SDPF_THREADPOOL_H
 
-
-#include <thread>
-#include <vector>
 #include <functional>
-#include <atomic>
 
-#include "BlockingQueue.hpp"
+// namespace sdpf {
 
+class ThreadPoolImp;
 
-class ThreadPool
-{
+class ThreadPool {
 public:
     using Task = std::function<void()>;
 
@@ -30,17 +26,9 @@ public:
     bool append(const Task& task);
 
 private:
-    void run();
-    int add_thread(size_t num);
-
-    std::vector<std::thread> threads_;
-    BlockingQueue<Task> tasks_;
-    //std::atomic_bool running_;
-
-    //size_t max_thread_; // max thread number
-    size_t max_task_; // max task number in queue
-    std::atomic_int idle_count_;
-    bool grow_;
+    ThreadPoolImp* imp_;
 };
 
-#endif // ECRON_THREADPOOL_H
+// } // namespace sdpf
+
+#endif // SDPF_THREADPOOL_H

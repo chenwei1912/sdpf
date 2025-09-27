@@ -1,32 +1,49 @@
 #include "IOTimer.h"
-#include "IOTimerImp.h"
+#include "IOScheduler.h"
 #include "logger.h"
 
-#include "IOScheduler.h"
+#include "uv.h"
+
+#include <atomic>
 
 // using namespace sdpf;
 
 
-IOTimer::IOTimer(IOScheduler* pctx) {
-    imp_ = new IOTimerImp(this, pctx);
-}
+class IOTimerImp {
+public:
+    using TimerTask = std::function<void()>;
+    using TimerCloseCallback = std::function<void(IOTimer*)>;
 
-IOTimer::~IOTimer() {
-    //LOG_TRACE("IOTimer {} destructing", static_cast<void*>(this));
-    if (imp_) {
-        delete imp_;
-        imp_ = nullptr;
-    }
-}
+    IOTimerImp(IOTimer* pif, IOScheduler* pctx);
+    ~IOTimerImp();
 
-int IOTimer::start(TimerTask cb, size_t timeout, size_t repeat) {
-    return imp_->start(cb, timeout, repeat);
-}
+    IOTimerImp(const IOTimerImp&) = delete;
+    IOTimerImp& operator=(const IOTimerImp&) = delete;
+    // IOTimerImp(IOTimerImp&&) = delete;
+    // IOTimerImp& operator=(IOTimerImp&&) = delete;
 
-int IOTimer::stop(TimerCloseCallback cb) {
-    return imp_->stop(cb);
-}
+    int start(TimerTask cb, size_t timeout, size_t repeat);
+    int stop(TimerCloseCallback cb = nullptr);
 
+private:
+    void on_start(TimerTask cb, size_t timeout, size_t repeat);
+    void on_stop(TimerCloseCallback cb);
+    void on_timer();
+    void on_close();
+
+
+    IOTimer* pif_;
+
+    IOScheduler* context_;
+    uv_timer_t handle_;
+    std::atomic_bool active_;
+
+    TimerTask cb_;
+    size_t timeout_; // unit: millisecond
+    size_t repeat_;
+
+    TimerCloseCallback close_cb_;
+};
 
 IOTimerImp::IOTimerImp(IOTimer* pif, IOScheduler* pctx)
             : pif_(pif), context_(pctx), active_(false) {
@@ -140,4 +157,25 @@ void IOTimerImp::on_close() {
     if (close_cb_) {
         close_cb_(pif_);
     }
+}
+
+
+IOTimer::IOTimer(IOScheduler* pctx) {
+    imp_ = new IOTimerImp(this, pctx);
+}
+
+IOTimer::~IOTimer() {
+    //LOG_TRACE("IOTimer {} destructing", static_cast<void*>(this));
+    if (imp_) {
+        delete imp_;
+        imp_ = nullptr;
+    }
+}
+
+int IOTimer::start(TimerTask cb, size_t timeout, size_t repeat) {
+    return imp_->start(cb, timeout, repeat);
+}
+
+int IOTimer::stop(TimerCloseCallback cb) {
+    return imp_->stop(cb);
 }
