@@ -292,7 +292,7 @@ int main(int argc, char* argv[]) {
         printf("log init error\n");
         return -1;
     }
-    LOG_INFO("start tcp client");
+    LOG_INFO("start rpc client test");
 
     IOScheduler ctx;
     ctx.init();

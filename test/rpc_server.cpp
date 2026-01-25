@@ -60,7 +60,7 @@ int main(int argc, char* argv[]) {
         printf("log init error\n");
         return -1;
     }
-    LOG_INFO("start tcp test");
+    LOG_INFO("start rpc server test");
 
 #if 1
     IOScheduler ctx;

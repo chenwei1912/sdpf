@@ -15,8 +15,7 @@
 
 // namespace sdpf {
 
-class IOSchedulerImp
-{
+class IOSchedulerImp {
 public:
     using AsyncTask = std::function<void()>;
 
@@ -78,8 +77,8 @@ int IOSchedulerImp::init() {
 
     handle_.data = (void*)this;
     ret = uv_async_init(&loop_, &handle_, [](uv_async_t* h){
-        IOSchedulerImp* ctx = (IOSchedulerImp*)h->data;
-        ctx->on_async();
+        IOSchedulerImp* sch = (IOSchedulerImp*)h->data;
+        sch->on_async();
     });
     if (0 != ret) {
         LOG_ERROR("uv async init failed: %s", uv_strerror(ret));
@@ -189,8 +188,8 @@ void IOSchedulerImp::on_stop() {
 
     if (0 == (uv_is_closing((uv_handle_t*)&handle_))) {
         uv_close((uv_handle_t*)&handle_, [](uv_handle_t* h) {
-            IOSchedulerImp* loop = (IOSchedulerImp*)h->data;
-            loop->on_close();
+            IOSchedulerImp* sch = (IOSchedulerImp*)h->data;
+            sch->on_close();
         });
     } else {
         on_close();
